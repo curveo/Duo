@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -12,10 +14,16 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
+import android.util.Log;
+import android.util.SparseArray;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
+
+import com.google.android.gms.vision.Frame;
+import com.google.android.gms.vision.barcode.Barcode;
+import com.google.android.gms.vision.barcode.BarcodeDetector;
 
 import it.jaschke.alexandria.api.Callback;
 
@@ -58,6 +66,15 @@ public class MainActivity extends ActionBarActivity implements NavigationDrawerF
         // Set up the drawer.
         navigationDrawerFragment.setUp(R.id.navigation_drawer,
                     (DrawerLayout) findViewById(R.id.drawer_layout));
+
+        Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.barcode13);
+        Frame f = new Frame.Builder().setBitmap(icon).build();
+        BarcodeDetector detector = new BarcodeDetector.Builder(this)
+                .setBarcodeFormats(Barcode.EAN_13)
+                .build();
+        SparseArray<Barcode> barcodes = detector.detect(f);
+        Log.d("MainActivity", "barcodes size is: " + barcodes.size());
+
     }
 
     @Override

@@ -6,12 +6,14 @@ import android.os.AsyncTask;
 import android.util.Log;
 import android.widget.ImageView;
 
+import java.io.IOException;
 import java.io.InputStream;
 
 /**
  * Created by saj on 11/01/15.
  */
 public class DownloadImage extends AsyncTask<String, Void, Bitmap> {
+    public static final String TAG = "DownloadImage";
     ImageView bmImage;
 
     public DownloadImage(ImageView bmImage) {
@@ -24,15 +26,15 @@ public class DownloadImage extends AsyncTask<String, Void, Bitmap> {
         try {
             InputStream in = new java.net.URL(urlDisplay).openStream();
             bookCover = BitmapFactory.decodeStream(in);
-        } catch (Exception e) {
-            Log.e("Error", e.getMessage());
-            e.printStackTrace();
+        } catch (IOException ie) {
+            Log.e(TAG, "Error downloading image!", ie);
         }
         return bookCover;
     }
 
     protected void onPostExecute(Bitmap result) {
-        bmImage.setImageBitmap(result);
+        if(result != null)
+            bmImage.setImageBitmap(result);
     }
 }
 

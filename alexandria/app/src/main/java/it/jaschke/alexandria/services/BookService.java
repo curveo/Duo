@@ -17,6 +17,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
 import java.net.URL;
 
 import it.jaschke.alexandria.MainActivity;
@@ -128,7 +130,12 @@ public class BookService extends IntentService {
                 return;
             }
             bookJsonString = buffer.toString();
-        } catch (Exception e) {
+            parseBookJson(ean,bookJsonString);
+        } catch (MalformedURLException e) {
+            Log.e(LOG_TAG, "Error ", e);
+        } catch (ProtocolException e) {
+            Log.e(LOG_TAG, "Error ", e);
+        } catch (IOException e) {
             Log.e(LOG_TAG, "Error ", e);
         } finally {
             if (urlConnection != null) {
@@ -141,13 +148,12 @@ public class BookService extends IntentService {
                     Log.e(LOG_TAG, "Error closing stream", e);
                 }
             }
-
         }
+    }
 
+    private void parseBookJson(String ean, String bookJsonString) {
         final String ITEMS = "items";
-
         final String VOLUME_INFO = "volumeInfo";
-
         final String TITLE = "title";
         final String SUBTITLE = "subtitle";
         final String AUTHORS = "authors";

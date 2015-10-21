@@ -4,6 +4,7 @@ import android.app.IntentService;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.util.Log;
 
@@ -23,29 +24,55 @@ import java.util.TimeZone;
 import java.util.Vector;
 
 import barqsoft.footballscores.DatabaseContract;
+import barqsoft.footballscores.LatestScoreWidget;
 import barqsoft.footballscores.R;
 
 /**
  * Created by yehya khaled on 3/2/2015.
  */
-public class myFetchService extends IntentService
+public class FetchService extends IntentService
 {
-    public static final String LOG_TAG = "myFetchService";
-    public myFetchService()
+    public static final String LOG_TAG = "FetchService";
+    public static final String N2 = "n2";
+    public static final String P2 = "p2";
+
+    public FetchService()
     {
-        super("myFetchService");
+        super("FetchService");
     }
 
     @Override
     protected void onHandleIntent(Intent intent)
     {
-        getData("n2");
-        getData("p2");
-
-        return;
+        if(intent.getExtras() != null) {
+            String extra = intent.getExtras().getString(Intent.EXTRA_TEXT);
+            int[] ids = intent.getExtras().getIntArray(Intent.EXTRA_UID);
+            if(extra != null && ids != null && extra.equals(LatestScoreWidget.SERVICE_CONTEXT)) {
+//                if(getData(P2)) {
+                    Context context = getApplicationContext();
+                    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+                    Date prevDay = new Date(System.currentTimeMillis()+((-1)*86400000));
+                    Cursor cursor = context.getContentResolver().query(DatabaseContract.scores_table.buildScoreWithDate(),
+                            null,null,new String[] {format.format(new Date())},null);
+                    if(cursor.getCount() == 0) {
+                        //Previous day
+                        cursor = context.getContentResolver().query(DatabaseContract.scores_table.buildScoreWithDate(),
+                                null,null,new String[] {format.format(new Date(System.currentTimeMillis()+(-1*86400000)))},null);
+                        if(cursor.getCount() == 0) {
+                            //Previous 2 days
+                            cursor = context.getContentResolver().query(DatabaseContract.scores_table.buildScoreWithDate(),
+                                    null,null,new String[] {format.format(new Date(System.currentTimeMillis()+(-2*86400000)))},null);
+                        }
+            }
+            LatestScoreWidget.updateAppWidget(context, ids, cursor);
+            }
+        } else {
+            getData(N2);
+            getData(P2);
+        }
     }
 
-    private void getData (String timeFrame)
+    private boolean getData (String timeFrame)
     {
         //Creating fetch URL
         final String BASE_URL = "http://api.football-data.org/alpha/fixtures"; //Base URL
@@ -71,7 +98,7 @@ public class myFetchService extends IntentService
             StringBuffer buffer = new StringBuffer();
             if (inputStream == null) {
                 // Nothing to do.
-                return;
+                return false;
             }
             reader = new BufferedReader(new InputStreamReader(inputStream));
 
@@ -82,28 +109,18 @@ public class myFetchService extends IntentService
                 // buffer for debugging.
                 buffer.append(line + "\n");
             }
-            if (buffer.length() == 0) {
-                // Stream was empty.  No point in parsing.
-                return;
-            }
+            if (buffer.length() == 0)
+                return false;
             JSON_data = buffer.toString();
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             Log.e(LOG_TAG,"Exception here" + e.getMessage());
-        }
-        finally {
-            if(m_connection != null)
-            {
+        } finally {
+            if(m_connection != null) {
                 m_connection.disconnect();
-            }
-            if (reader != null)
-            {
+            } if (reader != null) {
                 try {
                     reader.close();
-                }
-                catch (IOException e)
-                {
+                } catch (IOException e) {
                     Log.e(LOG_TAG,"Error Closing Stream");
                 }
             }
@@ -116,20 +133,18 @@ public class myFetchService extends IntentService
                     //if there is no data, call the function on dummy data
                     //this is expected behavior during the off season.
                     processJSONdata(getString(R.string.dummy_data), getApplicationContext(), false);
-                    return;
+                    return false;
                 }
-
-
                 processJSONdata(JSON_data, getApplicationContext(), true);
+                return true;
             } else {
                 //Could not Connect
                 Log.d(LOG_TAG, "Could not connect to server.");
             }
-        }
-        catch(Exception e)
-        {
+        } catch(Exception e) {
             Log.e(LOG_TAG,e.getMessage());
         }
+        return false;
     }
     private void processJSONdata (String JSONdata,Context mContext, boolean isReal)
     {
@@ -257,6 +272,8 @@ public class myFetchService extends IntentService
                     //Log.v(LOG_TAG,Away_goals);
 
                     values.add(match_values);
+
+
                 }
             }
             int inserted_data = 0;
